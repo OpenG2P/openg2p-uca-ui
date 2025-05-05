@@ -121,6 +121,7 @@ async function checkLoginStatusAndRedirect(){
         window.location = "${PATH_PREFIX}/login";
     } else if (res.status != 200){
         console.debug("Chat Page: Get profile response.", await res.text());
+        window.location = "${PATH_PREFIX}/login";
     } else {
         const resJson = await res.json();
         for(const key in resJson) { userProfile[key] = resJson[key]; }

@@ -3,11 +3,11 @@ function getCookieValue(name){
 }
 
 function getInitials(name){
-    const words = name.trim().split(' ');
+    const words = (name || "").trim().split(' ');
     let initials = '';
     for (const word of words) {
         if (word) {
-        initials += word[0].toUpperCase();
+            initials += word[0].toUpperCase();
         }
     }
     return initials;
