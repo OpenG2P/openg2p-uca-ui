@@ -1,7 +1,3 @@
-function getCookieValue(name){
-    return document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)')?.pop() || '';
-}
-
 function getInitials(name){
     const words = (name || "").trim().split(' ');
     let initials = '';

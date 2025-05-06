@@ -3,9 +3,11 @@ const POST_LOGOUT = "${API_PATH_PREFIX}/auth/logout";
 const POST_NEW_CHAT = "${API_PATH_PREFIX}/newChat";
 const POST_NEW_MESSAGE = "${API_PATH_PREFIX}/newChatMessage";
 
+const THREAD_ID_COOKIE_NAME = "${THREAD_ID_COOKIE_NAME:-thread_id}"
+
 const userProfile = {};
 
-function userDropDownClicked(){
+function userDropDownClicked(userDropdownContent){
     userDropdownContent.classList.toggle('show');
 }
 
@@ -20,7 +22,7 @@ function addMessage(text, sender) {
     messageDiv.classList.add(`message-${dollar}{sender}`);
     messageDiv.appendChild(messageTextDiv);
 
-    const messagesContainer = document.getElementById("messageContainer");
+    const messagesContainer = document.getElementById("messagesContainer");
     messagesContainer.appendChild(messageDiv);
 
     // Scroll to bottom
@@ -44,7 +46,7 @@ function addTimeToMessage(message, time) {
     return message;
 }
 
-function sendMessage() {
+function sendMessage(messageInput) {
     const message = messageInput.value.trim();
     if (message === '') return;
 
@@ -63,7 +65,7 @@ function sendMessage() {
         headers: {"content-type": "application/json"},
     }).then((res) => res.json()).then((resJson) => {
         replaceMessage(aiMessage, resJson.message);
-        addTimeToMessage(aiMessage);
+        addTimeToMessage(aiMessage, resJson.sent_at);
     }).catch((err) => {
         console.error("Error sending message to backend", err);
     });
@@ -115,6 +117,56 @@ function updateUserDataInDropdown(){
     }
 }
 
+function markActiveNavLink(threadId){
+    const navLinks = document.querySelectorAll('.nav-link');
+    navLinks.forEach(link => {
+        if (link.classList.contains('active')){
+            if(link.id.slice("navLink-".length) != threadId){
+                link.classList.remove('active');
+            }
+        } else if (link.id.slice("navLink-".length) === threadId) {
+            link.classList.add('active');
+        }
+    });
+}
+
+async function populateChatThreads(){
+
+}
+
+async function populatePastMessages(){
+
+}
+
+function initiateChatThread(){
+    const threadId = Cookies.get(THREAD_ID_COOKIE_NAME);
+    document.getElementById("messagesContainer").innerHTML = '';
+    if (!threadId) {
+        // Create new Chat Thread
+        (async () => {
+            const aiMessage = addMessage("...", "ai");
+            try {
+                const res = await fetch(POST_NEW_CHAT, { method: "POST" });
+                const resJson = await res.json();
+                replaceMessage(aiMessage, resJson.message);
+                addTimeToMessage(aiMessage, resJson.sent_at);
+            } catch (err) {
+                console.error("Error creating new chat thread", err);
+                throw err;
+            }
+        })();
+    } else {
+        // Get messages in chat existing chat thread
+        populatePastMessages();
+    }
+    markActiveNavLink(threadId);
+}
+
+function switchChatThread(newThreadId){
+    Cookies.set(THREAD_ID_COOKIE_NAME, newThreadId);
+    initiateChatThread();
+}
+
 async function checkLoginStatusAndRedirect(){
     const res = await fetch(GET_PROFILE_API + "?" + new URLSearchParams({online: true}).toString());
     if(res.status === 401 || res.status === 403){
@@ -129,35 +181,36 @@ async function checkLoginStatusAndRedirect(){
 }
 
 function logout() {
-    fetch(POST_LOGOUT, {
-        method: "POST"
-    });
+    fetch(POST_LOGOUT, {method: "POST"});
     window.location = "${PATH_PREFIX}/login";
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
     await checkLoginStatusAndRedirect();
-    updateUserDataInDropdown();
-
     const messageInput = document.getElementById('messageInput');
     const userDropdownContent = document.getElementById('userDropdownContent');
-    const toggleBtn = document.getElementById('toggleBtn');
+    const userDropdownBtn = document.getElementById("userDropdownBtn");
+    const navToggleBtn = document.getElementById('navToggleBtn');
     const sidebar = document.getElementById('sidebar');
     const main = document.getElementById('main');
+    const sendButton = document.getElementById('sendButton');
+    const logoutButton = document.getElementById("logoutButton");
+    const newChatButton = document.getElementById("newChatButton");
 
+    // Event Listeners
     // Toggle sidebar when button is clicked
-    toggleBtn.addEventListener('click', () => {
+    navToggleBtn.addEventListener('click', () => {
         sidebar.classList.toggle('collapsed');
         main.classList.toggle('nav-expanded');
     });
 
-    // markActiveNavLink();
+    userDropdownBtn.addEventListener('click', () => userDropDownClicked(userDropdownContent));
 
     // Close dropdown when clicking outside
     window.addEventListener('click', (e) => {
         if (!e.target.matches('.dropdown-btn') && !e.target.matches('.avatar') && !e.target.matches('#userDisplayName')) {
             if (userDropdownContent.classList.contains('show')) {
-                userDropdownContent.classList.remove('show');
+                userDropDownClicked(userDropdownContent);
             }
         }
     });
@@ -165,7 +218,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Send message on Enter key
     messageInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
-            sendMessage();
+            sendMessage(messageInput);
         }
     });
+    sendButton.addEventListener('click', () => sendMessage(messageInput));
+    logoutButton.addEventListener('click', logout);
+    newChatButton.addEventListener('click', initiateChatThread);
+
+    updateUserDataInDropdown();
+    await populateChatThreads();
+    initiateChatThread();
 });

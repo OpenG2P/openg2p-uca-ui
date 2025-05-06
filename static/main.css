@@ -93,7 +93,7 @@ header {
     height: var(--header-height);
 }
 
-.toggle-btn {
+.nav-toggle-btn {
     background: none;
     border: none;
     color: white;
@@ -228,10 +228,6 @@ header {
     list-style-type: none;
 }
 
-.nav-item {
-    border-bottom: 1px solid #e0e0e0;
-}
-
 .nav-link {
     display: flex;
     align-items: center;
@@ -239,6 +235,7 @@ header {
     color: #333;
     text-decoration: none;
     transition: all 0.3s;
+    border-bottom: 1px solid #e0e0e0;
 }
 
 .nav-link:hover {

@@ -9,41 +9,43 @@
     <link rel="stylesheet" href="${PATH_PREFIX}/static/Roboto.css">
     <script type="text/javascript" src="${PATH_PREFIX}/js/common.js"></script>
     <script type="text/javascript" src="${PATH_PREFIX}/js/chat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.5/dist/js.cookie.min.js"></script>
+
 </head>
 <body>
     <header>
         <div class="logo-container">
-            <button class="toggle-btn" id="toggleBtn">☰</button>
+            <button id="navToggleBtn" class="nav-toggle-btn">☰</button>
             <img src="${PATH_PREFIX}/static/logo.png" alt="Logo" class="logo">
             <span>OpenG2P UCA</span>
         </div>
         <div class="user-dropdown">
-            <button id="userDropdownBtn" onclick="userDropDownClicked()" class="dropdown-btn">
+            <button id="userDropdownBtn" class="dropdown-btn">
                 <div class="avatar" id="userAvatar"></div>
                 <span id="userDisplayName"></span>
                 <span>▼</span>
             </button>
             <div id="userDropdownContent" class="dropdown-content">
                 <table id="userDropdownInfo" class="user-info"></table>
-                <a href="#" onclick="logout()" class="user-logout danger">Logout</a>
+                <a id="logoutButton" href="#" class="user-logout danger">Logout</a>
             </div>
         </div>
     </header>
     <nav id="sidebar" class="sidebar collapsed">
         <ul id="navMenu" class="nav-menu">
-            <li class="nav-item"><a href="#" onclick="newChat()" class="nav-link"><span class="nav-icon">➕</span><span class="nav-text">New Chat</span></a></li>
-            <li class="nav-item"><a href="#" onclick="switchChat()" class="nav-link"><span class="nav-icon">📑</span><span class="nav-text">About</span></a></li>
+            <li id="newChatButton" class="nav-link"><span class="nav-icon">➕</span><span class="nav-text">New Chat</span></li>
+            <!-- <li id="navLink-thread_id2" class="nav-link"><span class="nav-icon">📑</span><span class="nav-text">About</span></li> -->
         </ul>
     </nav>
     <main id="main">
         <div class="chat-container">
             <div id="messagesContainer" class="messages-container">
-                <div class="message-ai"><div class="message-text message-text-ai">Hello! I'm your AI assistant. How can I help you today?</div><div class="message-time">Just now</div></div>
-                <div class="message-user"><div class="message-text message-text-user">Yo</div><div class="message-time">Just now</div></div>
+                <!-- <div class="message-ai"><div class="message-text message-text-ai">Hello! I'm your AI assistant. How can I help you today?</div><div class="message-time">Just now</div></div>
+                <div class="message-user"><div class="message-text message-text-user">Yo</div><div class="message-time">Just now</div></div> -->
             </div>
             <div class="input-container">
                 <input type="text" id="messageInput" class="message-input" placeholder="Type your message..." autofocus>
-                <button class="send-btn">Send</button>
+                <button id="sendButton" class="send-btn">Send</button>
             </div>
         </div>
     </main>
