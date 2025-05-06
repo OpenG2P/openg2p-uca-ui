@@ -1,7 +1,7 @@
-const GET_PROFILE_API = "${API_PATH_PREFIX}/auth/profile";
-const POST_LOGOUT = "${API_PATH_PREFIX}/auth/logout";
-const POST_NEW_CHAT = "${API_PATH_PREFIX}/newChat";
-const POST_NEW_MESSAGE = "${API_PATH_PREFIX}/newChatMessage";
+const GET_PROFILE_API = "${API_PATH_PREFIX}auth/profile";
+const POST_LOGOUT = "${API_PATH_PREFIX}auth/logout";
+const POST_NEW_CHAT = "${API_PATH_PREFIX}newChat";
+const POST_NEW_MESSAGE = "${API_PATH_PREFIX}newChatMessage";
 
 const THREAD_ID_COOKIE_NAME = "${THREAD_ID_COOKIE_NAME:-thread_id}"
 
@@ -170,10 +170,10 @@ function switchChatThread(newThreadId){
 async function checkLoginStatusAndRedirect(){
     const res = await fetch(GET_PROFILE_API + "?" + new URLSearchParams({online: true}).toString());
     if(res.status === 401 || res.status === 403){
-        window.location = "${PATH_PREFIX}/login";
+        window.location = "${PATH_PREFIX}login";
     } else if (res.status != 200){
         console.debug("Chat Page: Get profile response.", await res.text());
-        window.location = "${PATH_PREFIX}/login";
+        window.location = "${PATH_PREFIX}login";
     } else {
         const resJson = await res.json();
         for(const key in resJson) { userProfile[key] = resJson[key]; }
@@ -182,7 +182,7 @@ async function checkLoginStatusAndRedirect(){
 
 function logout() {
     fetch(POST_LOGOUT, {method: "POST"});
-    window.location = "${PATH_PREFIX}/login";
+    window.location = "${PATH_PREFIX}login";
 }
 
 document.addEventListener("DOMContentLoaded", async () => {

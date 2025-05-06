@@ -8,6 +8,12 @@ export CONFIG_BASE_PATH=${CONFIG_BASE_PATH:-/etc/nginx}
 export TEMPLATE_OUT_DIR=${TEMPLATE_OUT_DIR:-/var/run/openresty/openg2p}
 export dollar='$'
 
+export PATH_PREFIX=${PATH_PREFIX:-/};  # PATH_PREFIX defaults to /
+export PATH_PREFIX="${PATH_PREFIX%/}/";  # Add trailing slash if doesn't exist
+export API_PATH_PREFIX=${API_PATH_PREFIX:-/v1/uca};  # API_PATH_PREFIX defaults to /v1/uca
+export API_PATH_PREFIX="${API_PATH_PREFIX%/}/";  # Add trailing slash if doesn't exist
+export API_BACKEND_URL=${API_BACKEND_URL:-http://172.17.0.1:8000/}
+
 # Render Html files
 mkdir -p ${TEMPLATE_OUT_DIR}/html
 for file in ${CONFIG_BASE_PATH}/html/*; do

@@ -4,7 +4,7 @@
 
 - Run:
   ```sh
-  docker build . -t openg2p-uca-ui && docker run --name uca-ui --rm -it -e API_PATH_PREFIX=/v1/uca -p 3001:8000 openg2p-uca-ui
+  docker build . -t openg2p-uca-ui && docker run --name uca-ui --rm -it -p 3000:8000 openg2p-uca-ui
   ```
 - Access the UI on http://localhost:3000/chat.
 
