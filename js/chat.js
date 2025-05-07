@@ -1,11 +1,13 @@
 const GET_PROFILE_API = "${API_PATH_PREFIX}auth/profile";
 const POST_LOGOUT = "${API_PATH_PREFIX}auth/logout";
-const POST_NEW_CHAT = "${API_PATH_PREFIX}newChat";
-const POST_NEW_MESSAGE = "${API_PATH_PREFIX}newChatMessage";
-const GET_CHAT_THREADS = "${API_PATH_PREFIX}getThreads";
-const GET_CHAT_MESSAGES = "${API_PATH_PREFIX}getMessages";
 
-const THREAD_ID_COOKIE_NAME = "${THREAD_ID_COOKIE_NAME}" || "thread_id"
+const GET_CURRENT_CHAT_THREAD = "${API_PATH_PREFIX}chat/thread";
+const POST_NEW_THREAD = "${API_PATH_PREFIX}chat/thread";
+const SWITCH_CHAT_THREAD = "${API_PATH_PREFIX}chat/thread";
+const GET_CHAT_THREADS = "${API_PATH_PREFIX}chat/threads";
+
+const POST_NEW_MESSAGE = "${API_PATH_PREFIX}chat/message";
+const GET_CHAT_MESSAGES = "${API_PATH_PREFIX}chat/messages";
 
 const userProfile = {};
 
@@ -21,7 +23,8 @@ function addThread(threadId, time) {
     threadDom.innerHTML = `<span class="nav-icon">📑</span><span class="nav-text">${dollar}{threadTime}</span>`;
     threadDom.addEventListener('click', () => switchChatThread(threadId));
 
-    document.getElementById("navMenu").appendChild(threadDom);
+    const newChatButton = document.getElementById("newChatButton");
+    newChatButton.parentNode.insertBefore(threadDom, newChatButton.nextSibling);
 }
 
 function addMessage(text, sender, scrollTop=true) {
@@ -157,9 +160,9 @@ async function populateChatThreads(page=0){
         const resJson = await res.json();
         const threads = resJson.threads || [];
 
-        threads.forEach((thread) => {
-            addThread(thread.thread_id, new Date(thread.created_at));
-        });
+        for(let i = threads.length-1; i>=0; i--) {
+            addThread(threads[i].thread_id, new Date(threads[i].created_at));
+        }
     } catch (err) {
         console.error("Error retrieving threads", err);
         throw err;
@@ -193,39 +196,46 @@ async function populatePastMessages(page=0){
     }
 }
 
-function initiateChatThread(force=false){
-    const threadId = Cookies.get(THREAD_ID_COOKIE_NAME);
+async function initiateChatThread(force=false){
     document.getElementById("messagesContainer").innerHTML = '';
-    if (force || !Cookies.get(THREAD_ID_COOKIE_NAME)) {
-        // Create new Chat Thread
-        (async () => {
-            const aiMessage = addMessage("...", "ai");
-            try {
-                const res = await fetch(POST_NEW_CHAT, { method: "POST" });
-                if(!res.ok) throw Error(`Http Error. ${dollar}{res.status}. ${dollar}{await res.text()}`);
-                const resJson = await res.json();
-                const threadTime = new Date(resJson.sent_at);
-                const newThreadId = Cookies.get(THREAD_ID_COOKIE_NAME);
-                addThread(newThreadId, threadTime);
-                markActiveNavLink(newThreadId);
-                replaceMessage(aiMessage, resJson.message);
-                addTimeToMessage(aiMessage, threadTime);
-            } catch (err) {
-                console.error("Error creating new chat thread", err);
-                throw err;
-                // TODO: Handle error
-            }
-        })();
-    } else {
-        // Get messages in chat existing chat thread
-        markActiveNavLink(threadId);
-        populatePastMessages();
+    if (!force){
+        const getThreadRes = await fetch(GET_CURRENT_CHAT_THREAD);
+        if(getThreadRes.ok) {
+            const getThreadResJson = await getThreadRes.json();
+            markActiveNavLink(getThreadResJson.thread_id);
+            // Get messages in chat existing chat thread
+            await populatePastMessages();
+            return;
+        }
+    }
+    // Create new Chat Thread
+    const aiMessage = addMessage("...", "ai");
+    try {
+        const createThreadRes = await fetch(POST_NEW_THREAD, { method: "POST" });
+        if(!createThreadRes.ok) throw Error(`Http Error. ${dollar}{createThreadResJson.status}. ${dollar}{await createThreadResJson.text()}`);
+        const createThreadResJson = await createThreadRes.json();
+        const newThreadId = createThreadResJson.thread_id;
+        addThread(newThreadId, new Date(createThreadResJson.thread_created_at));
+        markActiveNavLink(newThreadId);
+        replaceMessage(aiMessage, createThreadResJson.message);
+        addTimeToMessage(aiMessage, new Date(createThreadResJson.message_sent_at));
+    } catch (err) {
+        console.error("Error creating new chat thread", err);
+        throw err;
+        // TODO: Handle error
     }
 }
 
-function switchChatThread(newThreadId){
-    Cookies.set(THREAD_ID_COOKIE_NAME, newThreadId);
-    initiateChatThread();
+async function switchChatThread(newThreadId){
+    document.getElementById("messagesContainer").innerHTML = '';
+    const res = await fetch(SWITCH_CHAT_THREAD, {
+        method: "PUT",
+        body: JSON.stringify({thread_id: newThreadId}),
+        headers: {"content-type": "application/json"},
+    });
+    if(!res.ok) throw Error(`Http Error. ${dollar}{res.status}. ${dollar}{await res.text()}`);
+    markActiveNavLink(newThreadId);
+    await populatePastMessages();
 }
 
 async function checkLoginStatusAndRedirect(){
@@ -288,5 +298,5 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     updateUserDataInDropdown();
     await populateChatThreads();
-    initiateChatThread();
+    await initiateChatThread();
 });
