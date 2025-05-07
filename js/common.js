@@ -10,15 +10,15 @@ function getInitials(name){
 }
 
 function convertIsoTimestampToReadableText(date) {
-    const day = date.getUTCDate().toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
     const monthNames = ["January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
     ];
-    const month = monthNames[date.getUTCMonth()];
-    const year = date.getUTCFullYear();
+    const month = monthNames[date.getMonth()];
+    const year = date.getFullYear();
 
-    let hour = date.getUTCHours();
-    const minute = date.getUTCMinutes().toString().padStart(2, '0');
+    let hour = date.getHours();
+    const minute = date.getMinutes().toString().padStart(2, '0');
     const period = hour >= 12 ? 'PM' : 'AM';
     hour = hour % 12;
     hour = hour === 0 ? 12 : hour; // Handle 12 AM/PM

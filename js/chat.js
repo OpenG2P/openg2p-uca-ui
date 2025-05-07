@@ -154,11 +154,12 @@ async function populateChatThreads(page=0){
     try {
         const res = await fetch(GET_CHAT_THREADS + "?" + new URLSearchParams({page}).toString());
         if(!res.ok) throw Error(`Http Error. ${dollar}{res.status}. ${dollar}{await res.text()}`);
-        const threads = (await res.json()).threads || [];
+        const resJson = await res.json();
+        const threads = resJson.threads || [];
 
-        for(const thread in threads){
+        threads.forEach((thread) => {
             addThread(thread.thread_id, new Date(thread.created_at));
-        }
+        });
     } catch (err) {
         console.error("Error retrieving threads", err);
         throw err;
@@ -169,12 +170,12 @@ async function populatePastMessages(page=0){
     try {
         const res = await fetch(GET_CHAT_MESSAGES + "?" + new URLSearchParams({page}).toString());
         if(!res.ok) throw Error(`Http Error. ${dollar}{res.status}. ${dollar}{await res.text()}`);
-        const messages = (await res.json()).messages || [];
+        const resJson = await res.json();
+        const messages = resJson.messages || [];
 
-        for(const message in messages){
-            const msgTime = convertIsoTimestampToReadableText(new Date(message.sent_at || ''));
+        for(let i=messages.length-1; i>=0; i--){
             let msgRole = '';
-            switch (message.message_by) {
+            switch (messages[i].message_by) {
                 case "user":
                     msgRole = "user";
                     break;
@@ -182,8 +183,8 @@ async function populatePastMessages(page=0){
                     msgRole = "ai";
                     break;
             }
-            const msgDom = addMessage(message.message, msgRole, false);
-            addTimeToMessage(msgDom, new Date(msgTime));
+            const msgDom = addMessage(messages[i].message, msgRole, false);
+            addTimeToMessage(msgDom, new Date(messages[i].sent_at));
         }
     } catch (err) {
         console.error("Error retrieving messages", err);
