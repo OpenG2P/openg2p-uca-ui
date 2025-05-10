@@ -15,13 +15,13 @@ function userDropDownClicked(userDropdownContent){
     userDropdownContent.classList.toggle('show');
 }
 
-function addThread(threadId, time) {
+function addThread(threadId, time, active=false) {
     const threadTime = convertIsoTimestampToReadableText(time);
     const threadDom = document.createElement('li');
-    threadDom.id = `navLink-${dollar}{threadId}`
     threadDom.classList.add("nav-link");
+    if(active) threadDom.classList.add("active");
     threadDom.innerHTML = `<span class="nav-icon">📑</span><span class="nav-text">${dollar}{threadTime}</span>`;
-    threadDom.addEventListener('click', () => switchChatThread(threadId));
+    threadDom.addEventListener('click', () => switchChatThread(threadDom, threadId));
 
     const newChatButton = document.getElementById("newChatButton");
     newChatButton.parentNode.insertBefore(threadDom, newChatButton.nextSibling);
@@ -140,20 +140,14 @@ function updateUserDataInDropdown(){
     }
 }
 
-function markActiveNavLink(threadId){
-    const navLinks = document.querySelectorAll('.nav-link');
+function markAllNavLinksInactive(){
+    const navLinks = document.querySelectorAll('.nav-link.active');
     navLinks.forEach(link => {
-        if (link.classList.contains('active')){
-            if(link.id.slice("navLink-".length) != threadId){
-                link.classList.remove('active');
-            }
-        } else if (link.id.slice("navLink-".length) === threadId) {
-            link.classList.add('active');
-        }
+        link.classList.remove('active');
     });
 }
 
-async function populateChatThreads(page=0){
+async function populateChatThreads(page=0, currentThreadId=""){
     try {
         const res = await fetch(GET_CHAT_THREADS + "?" + new URLSearchParams({page}).toString());
         if(!res.ok) throw Error(`Http Error. ${dollar}{res.status}. ${dollar}{await res.text()}`);
@@ -161,7 +155,7 @@ async function populateChatThreads(page=0){
         const threads = resJson.threads || [];
 
         for(let i = threads.length-1; i>=0; i--) {
-            addThread(threads[i].thread_id, new Date(threads[i].created_at));
+            addThread(threads[i].thread_id, new Date(threads[i].created_at), threads[i].thread_id === currentThreadId);
         }
     } catch (err) {
         console.error("Error retrieving threads", err);
@@ -196,27 +190,16 @@ async function populatePastMessages(page=0){
     }
 }
 
-async function initiateChatThread(force=false){
+async function initiateNewChatThread(){
     document.getElementById("messagesContainer").innerHTML = '';
-    if (!force){
-        const getThreadRes = await fetch(GET_CURRENT_CHAT_THREAD);
-        if(getThreadRes.ok) {
-            const getThreadResJson = await getThreadRes.json();
-            markActiveNavLink(getThreadResJson.thread_id);
-            // Get messages in chat existing chat thread
-            await populatePastMessages();
-            return;
-        }
-    }
-    // Create new Chat Thread
     const aiMessage = addMessage("...", "ai");
     try {
         const createThreadRes = await fetch(POST_NEW_THREAD, { method: "POST" });
         if(!createThreadRes.ok) throw Error(`Http Error. ${dollar}{createThreadResJson.status}. ${dollar}{await createThreadResJson.text()}`);
         const createThreadResJson = await createThreadRes.json();
         const newThreadId = createThreadResJson.thread_id;
-        addThread(newThreadId, new Date(createThreadResJson.thread_created_at));
-        markActiveNavLink(newThreadId);
+        markAllNavLinksInactive();
+        addThread(newThreadId, new Date(createThreadResJson.thread_created_at), true);
         replaceMessage(aiMessage, createThreadResJson.message);
         addTimeToMessage(aiMessage, new Date(createThreadResJson.message_sent_at));
     } catch (err) {
@@ -226,7 +209,7 @@ async function initiateChatThread(force=false){
     }
 }
 
-async function switchChatThread(newThreadId){
+async function switchChatThread(threadDom, newThreadId){
     document.getElementById("messagesContainer").innerHTML = '';
     const res = await fetch(SWITCH_CHAT_THREAD, {
         method: "PUT",
@@ -234,7 +217,8 @@ async function switchChatThread(newThreadId){
         headers: {"content-type": "application/json"},
     });
     if(!res.ok) throw Error(`Http Error. ${dollar}{res.status}. ${dollar}{await res.text()}`);
-    markActiveNavLink(newThreadId);
+    markAllNavLinksInactive();
+    threadDom.classList.add("active");
     await populatePastMessages();
 }
 
@@ -294,9 +278,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     sendButton.addEventListener('click', () => sendMessage(messageInput));
     logoutButton.addEventListener('click', logout);
-    newChatButton.addEventListener('click', () => initiateChatThread(true));
+    newChatButton.addEventListener('click', () => initiateNewChatThread());
 
     updateUserDataInDropdown();
-    await populateChatThreads();
-    await initiateChatThread();
+    const currentThreadRes = await fetch(GET_CURRENT_CHAT_THREAD);
+    let currentThreadId = "";
+    if(currentThreadRes.ok) currentThreadId = (await currentThreadRes.json()).thread_id;
+
+    await populateChatThreads(0, currentThreadId);
+    if (!currentThreadId){
+        await initiateNewChatThread();
+    } else {
+        await populatePastMessages();
+    }
 });
