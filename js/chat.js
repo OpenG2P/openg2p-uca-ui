@@ -11,6 +11,8 @@ const GET_CHAT_MESSAGES = "${API_PATH_PREFIX}chat/messages";
 
 const userProfile = {};
 
+const markDownConverter = new showdown.Converter();
+
 function userDropDownClicked(userDropdownContent){
     userDropdownContent.classList.toggle('show');
 }
@@ -28,11 +30,9 @@ function addThread(threadId, time, active=false) {
 }
 
 function addMessage(text, sender, scrollTop=true) {
-    const messageText = document.createTextNode(text);
-
     const messageTextDiv = document.createElement('div');
     messageTextDiv.classList.add(`message-text`, `message-text-${dollar}{sender}`);
-    messageTextDiv.appendChild(messageText);
+    messageTextDiv.innerHTML = markDownConverter.makeHtml(text);
 
     const messageDiv = document.createElement('div');
     messageDiv.classList.add(`message-${dollar}{sender}`);
@@ -50,7 +50,7 @@ function addMessage(text, sender, scrollTop=true) {
 
 function replaceMessage(message, text) {
     if(!text) message.remove();
-    message.childNodes[0].textContent = text;
+    message.childNodes[0].innerHTML = markDownConverter.makeHtml(text);
     return message;
 }
 
