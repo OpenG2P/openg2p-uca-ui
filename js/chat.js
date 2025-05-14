@@ -49,6 +49,7 @@ function addMessage(text, sender, scrollTop=true) {
 }
 
 function replaceMessage(message, text) {
+    if(!text) message.remove();
     message.childNodes[0].textContent = text;
     return message;
 }
