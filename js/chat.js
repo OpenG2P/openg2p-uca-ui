@@ -8,6 +8,9 @@ const GET_CHAT_THREADS = "${API_PATH_PREFIX}chat/threads";
 
 const POST_NEW_MESSAGE = "${API_PATH_PREFIX}chat/message";
 const GET_CHAT_MESSAGES = "${API_PATH_PREFIX}chat/messages";
+const POST_NEW_VOICE_MESSAGE = "${API_PATH_PREFIX}chat/voice_message";
+
+const SHOW_READ_OUT_FOR_INPUTS = "${SHOW_READ_OUT_FOR_INPUTS}" === "true";
 
 const userProfile = {};
 
@@ -37,6 +40,36 @@ function addMessage(text, sender, scrollTop=true) {
     const messageDiv = document.createElement('div');
     messageDiv.classList.add(`message-${dollar}{sender}`);
     messageDiv.appendChild(messageTextDiv);
+
+    const messagesContainer = document.getElementById("messagesContainer");
+    messagesContainer.appendChild(messageDiv);
+
+    // Scroll to bottom
+    if(scrollTop){
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    return messageDiv;
+}
+
+function addVoiceMessage(audioUrl, duration, scrollTop=true) {
+    const audio = {src: audioUrl, audio: null};
+    const playBtn = document.createElement('button');
+    playBtn.classList.add('user-audio-play-btn');
+    playBtn.innerHTML = '<span class="icon-play"></span>';
+    playBtn.addEventListener('click', () => toggleAudioPlayback(audio, playBtn));
+
+    const durationDiv = document.createElement('div');
+    durationDiv.classList.add('user-audio-duration');
+    durationDiv.innerHTML = '<span class="icon-volume"></span> ' + convertSecondsToReadableText(duration);
+
+    const messageAudioDiv = document.createElement('div');
+    messageAudioDiv.classList.add('message-audio');
+    messageAudioDiv.appendChild(playBtn);
+    messageAudioDiv.appendChild(durationDiv);
+
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('message-user');
+    messageDiv.appendChild(messageAudioDiv);
 
     const messagesContainer = document.getElementById("messagesContainer");
     messagesContainer.appendChild(messageDiv);
@@ -236,9 +269,95 @@ async function checkLoginStatusAndRedirect(){
     }
 }
 
-function logout() {
-    fetch(POST_LOGOUT, {method: "POST"});
+async function logout() {
+    try {await fetch(POST_LOGOUT, {method: "POST"});} catch(err) {}
     window.location = "${PATH_PREFIX}login";
+}
+
+async function toggleMicButton(micButton, recordingIndicator, recordingTimeSpan, mediaRecorder){
+    if(micButton.classList.contains('recording')){
+        if (mediaRecorder.recorder && mediaRecorder.recorder.state === 'recording') {
+            mediaRecorder.recorder.stop();
+            mediaRecorder.recorder = null;
+
+            micButton.classList.remove('recording');
+            micButton.querySelector('.icon-mic').classList.remove('recording');
+            recordingIndicator.classList.remove('active');
+        }
+    } else {
+        const recordingTime = {value: 0};
+        const recordingInterval = setInterval(() => {
+            recordingTime.value++;
+            recordingTimeSpan.textContent = "Recording... " + convertSecondsToReadableText(recordingTime.value);
+        }, 1000);
+        await startRecording(mediaRecorder, recordingTime, recordingInterval);
+        micButton.classList.add('recording');
+        micButton.querySelector('.icon-mic').classList.add('recording');
+        recordingIndicator.classList.add('active');
+    }
+}
+
+function toggleAudioPlayback(audio, button) {
+    if(button.firstChild.classList.contains('icon-pause')){
+        audio.audio.pause();
+        audio.audio = null;
+        button.innerHTML = '<span class="icon-play"></span>';
+    } else {
+        audio.audio = new Audio(audio.src);
+        audio.audio.play();
+        button.innerHTML = '<span class="icon-pause"></span>';
+
+        audio.audio.onended = () => {
+            button.innerHTML = '<span class="icon-play"></span>';
+        };
+    }
+}
+
+async function startRecording(mediaRecorder, recordingTime, recordingInterval){
+    try{
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const audioChunks = [];
+
+        mediaRecorder.recorder = new MediaRecorder(stream);
+
+        mediaRecorder.recorder.ondataavailable = (event) => {
+            audioChunks.push(event.data);
+        };
+
+        mediaRecorder.recorder.onstop = async () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            const audioUrl = URL.createObjectURL(audioBlob);
+
+            addVoiceMessage(audioUrl, recordingTime.value);
+            const aiMessage = addMessage("...", "ai");
+
+            // Send audio to backend API
+            try {
+                const formData = new FormData();
+                formData.append("audio", audioBlob);
+                const res = await fetch(POST_NEW_VOICE_MESSAGE,{
+                    method: "POST",
+                    body: formData,
+                });
+
+                const resJson = await res.json();
+                replaceMessage(aiMessage, resJson.message);
+                addTimeToMessage(aiMessage, new Date(resJson.sent_at));
+            } catch (err) {
+                console.error('Error sending audio to API', err);
+                throw err;
+            }
+
+            // Cleanup
+            stream.getTracks().forEach(track => track.stop());
+            clearInterval(recordingInterval);
+        };
+
+        mediaRecorder.recorder.start();
+    } catch(err) {
+        console.error('Error accessing microphone:', err);
+        alert('Unable to access microphone. Please check permissions.');
+    }
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -250,6 +369,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const sidebar = document.getElementById('sidebar');
     const main = document.getElementById('main');
     const sendButton = document.getElementById('sendButton');
+    const micButton = document.getElementById('micButton');
+    const recordingIndicator = document.getElementById('recordingIndicator');
+    const recordingTimeSpan = document.getElementById('recordingTime');
     const logoutButton = document.getElementById("logoutButton");
     const newChatButton = document.getElementById("newChatButton");
 
@@ -280,6 +402,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     sendButton.addEventListener('click', () => sendMessage(messageInput));
     logoutButton.addEventListener('click', logout);
     newChatButton.addEventListener('click', () => initiateNewChatThread());
+
+    const mediaRecorder = {recorder: null};
+
+    micButton.addEventListener('click', () => toggleMicButton(micButton, recordingIndicator, recordingTimeSpan, mediaRecorder));
 
     updateUserDataInDropdown();
     const currentThreadRes = await fetch(GET_CURRENT_CHAT_THREAD);

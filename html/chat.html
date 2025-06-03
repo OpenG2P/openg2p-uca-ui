@@ -38,8 +38,13 @@
     <main id="main">
         <div class="chat-container">
             <div id="messagesContainer" class="messages-container"></div>
+            <div class="recording-indicator" id="recordingIndicator">
+                <span class="recording-dot"></span>
+                <span id="recordingTime"></span>
+            </div>
             <div class="input-container">
                 <input type="text" id="messageInput" class="message-input" placeholder="Type your message..." autofocus>
+                <button id="micButton" class="mic-btn"><span class="icon-mic"></span></button>
                 <button id="sendButton" class="send-btn">Send</button>
             </div>
         </div>

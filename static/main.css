@@ -350,6 +350,16 @@ main.nav-expanded {
     color: var(--dark-bg);
 }
 
+.message-audio {
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    border-bottom-right-radius: 0;
+    background: #66f59f;
+    color: var(--primary-color);
+    display: flex;
+}
+
 .message-time {
     font-size: 0.7rem;
     color: rgba(0, 0, 0, 0.5);
@@ -396,6 +406,125 @@ main.nav-expanded {
 .send-btn:disabled {
     background-color: var(--secondary-color);
     cursor: not-allowed;
+}
+
+.user-audio-play-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    background: rgba(255, 255, 255, 0.7);
+    color: var(--dark-bg);
+}
+
+.user-audio-play-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.user-audio-duration {
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding-left: 0.5rem;
+}
+
+.recording-indicator {
+    background: #fef2f2;
+    border-top: 1px solid #fecaca;
+    padding: 12px;
+    text-align: center;
+    color: #dc2626;
+    font-size: 14px;
+    font-weight: 500;
+    display: none;
+}
+
+.recording-indicator.active {
+    display: block;
+}
+
+.recording-dot {
+    width: 8px;
+    height: 8px;
+    background: #dc2626;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.mic-btn {
+    width: 48px;
+    height: 48px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    background: #10b981;
+    color: white;
+}
+
+.mic-btn:hover {
+    background: #059669;
+}
+
+.mic-btn.recording {
+    background: #dc2626;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.mic-btn.recording:hover {
+    background: #b91c1c;
+}
+
+.icon-play::before {
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    display: inline-block;
+    content: "▶";
+}
+
+.icon-pause::before {
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    display: inline-block;
+    content: "⏸";
+}
+
+.icon-volume::before {
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    display: inline-block;
+    content: "🔊";
+}
+
+.icon-mic::before {
+    width: 20px;
+    height: 20px;
+    font-size: 16px;
+    display: inline-block;
+    content: "🎤";
+}
+
+.icon-mic.recording::before {
+    content: "🔴";
 }
 
 .hidden {

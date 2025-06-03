@@ -29,3 +29,9 @@ function convertIsoTimestampToReadableText(date) {
 
     return `${dollar}{formattedDate} ${dollar}{formattedTime}`;
 }
+
+function convertSecondsToReadableText(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${dollar}{mins}:${dollar}{secs.toString().padStart(2, '0')}`;
+}
