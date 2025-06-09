@@ -331,6 +331,10 @@ main.nav-expanded {
     align-self: flex-start;
 }
 
+.message-box {
+    display: flex;
+}
+
 .message-text {
     padding: 0.8rem 1rem;
     border: 1px solid var(--primary-color);
@@ -491,6 +495,19 @@ main.nav-expanded {
     background: #b91c1c;
 }
 
+.speak-msg-btn {
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 100%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    color: rgba(0, 0, 0, 0.5);
+}
+
 .icon-play::before {
     width: 20px;
     height: 20px;
@@ -525,6 +542,30 @@ main.nav-expanded {
 
 .icon-mic.recording::before {
     content: "🔴";
+}
+
+.icon-speak-start::before {
+    width: 25px;
+    height: 25px;
+    font-size: 20px;
+    display: inline-block;
+    content: "🔊";
+}
+
+.icon-speak-stop::before {
+    width: 25px;
+    height: 25px;
+    font-size: 20px;
+    display: inline-block;
+    content: "⏸";
+}
+
+.icon-speak-load::before {
+    width: 25px;
+    height: 25px;
+    font-size: 20px;
+    display: inline-block;
+    content: "⏳";
 }
 
 .hidden {
