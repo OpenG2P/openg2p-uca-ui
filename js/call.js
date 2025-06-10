@@ -1,123 +1,106 @@
-const WS_CALL_API = "${API_PATH_PREFIX}call";
-const PING_TIME_GAP = 10000;
-
-function getWsCallUrl(){
-    const url = new URL(WS_CALL_API, location.href);
-    url.protocol = 'wss';
-    return url;
-}
+const GET_CALL_META_API = "${API_PATH_PREFIX}call/meta";
+const POST_CALL_OFFER_API = "${API_PATH_PREFIX}call/offer";
 
 async function startCall(connection) {
-    // 1. Establish WebSocket connection for signaling
-    connection.ws = new WebSocket(getWsCallUrl());
-    connection.ws.onopen = async () => {
-        // 2. Create RTCPeerConnection
-        connection.pc = new RTCPeerConnection({
-            iceServers: [
-                { urls: "stun:stun.l.google.com:19302" }, // Public STUN server
-                // TODO: TURN server study.
-            ]
-        });
+    // 1. Get Call meta Info
+    const callMetaRes = await fetch(GET_CALL_META_API);
+    if(!callMetaRes.ok) throw Error(`Call Meta Http Error. ${dollar}{callMetaRes.status}. ${dollar}{await callMetaRes.text()}`);
+    const callMetaResJson = await callMetaRes.json();
 
-        // 3. Handle connection state changes (for debugging)
-        connection.pc.onconnectionstatechange = () => {
-            console.log("Connection state changed:", connection.pc.connectionState);
-            document.getElementById("statusText").innerHTML = `<span>Status: Call ${dollar}{connection.pc.connectionState}</span>`;
-            if (connection.pc.connectionState === "connected") {
-                connection.ws.send(JSON.stringify({type: "ping"}));
-            }
-            if (connection.pc.connectionState === "failed" || connection.pc.connectionState === "disconnected") {
-                stopCall(connection);
-            }
-        };
+    // 2. Get user media (audio input)
+    let localStream = null;
+    try{
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    } catch (error) {
+        console.error("Error accessing media devices:", error);
+        throw err;
+    }
 
-        // 4. Handle incoming remote tracks (audio output)
-        connection.pc.ontrack = (event) => {
-            console.log("Remote track received:", event.track);
-            if (event.track.kind === 'audio') {
-                connection.audioElement = new Audio();
-                connection.audioElement.srcObject = new MediaStream();
-                connection.audioElement.srcObject.addTrack(event.track);
-                connection.audioElement.play();
-                console.log("Remote audio stream created element.");
-            }
-        };
+    // 3. Create RTCPeerConnection
+    connection.pc = new RTCPeerConnection({iceServers: callMetaResJson.iceServers});
+    connection.localStream = localStream;
+    connection.localStream.getTracks().forEach(track => {
+        connection.pc.addTrack(track, connection.localStream);
+        console.log("Added local audio track.");
+    });
 
-        // 5. Get user media (audio)
-        try {
-            connection.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-            connection.localStream.getTracks().forEach(track => {
-                connection.pc.addTrack(track, connection.localStream);
-                console.log("Added local audio track.");
-            });
-        } catch (error) {
-            console.error("Error accessing media devices:", error);
-            return;
+    // 4. Handle connection state changes (for debugging)
+    connection.pc.onconnectionstatechange = () => {
+        console.log("Connection state changed:", connection.pc.connectionState);
+        document.getElementById("statusText").innerHTML = `<span>Status: Call ${dollar}{connection.pc.connectionState}</span>`;
+        if (connection.pc.connectionState === "failed" || connection.pc.connectionState === "disconnected") {
+            stopCall(connection);
         }
+    };
 
-        // 6. Create WebRTC Offer
-        const offer = await connection.pc.createOffer();
-        await connection.pc.setLocalDescription(offer);
-        console.log("Sending SDP offer:", offer);
-        connection.ws.send(JSON.stringify({
-            type: "offer",
+    // 5. Handle incoming remote tracks (audio output)
+    connection.pc.ontrack = (event) => {
+        console.log("Remote track received:", event.track);
+        if (event.track.kind === 'audio') {
+            connection.audioElement = new Audio();
+            connection.audioElement.srcObject = new MediaStream();
+            connection.audioElement.srcObject.addTrack(event.track);
+            connection.audioElement.play();
+            console.log("Remote audio stream created element.");
+        }
+    };
+
+    // 6. Create WebRTC Offer
+    await connection.pc.setLocalDescription(await connection.pc.createOffer());
+    console.log("Sending SDP offer:", offer);
+    const callOfferRes = await fetch(POST_CALL_OFFER_API, {
+        method: 'POST',
+        body: JSON.stringify({
             sdp: connection.pc.localDescription.sdp,
-            sdp_type: connection.pc.localDescription.type
-        }));
-    };
-
-    connection.ws.onmessage = async (event) => {
-        const data = JSON.parse(event.data);
-        if (data.type === "answer") {
-            console.log("Received SDP answer:", data.sdp);
-            const answer = new RTCSessionDescription({ sdp: data.sdp, type: "answer" });
-            await connection.pc.setRemoteDescription(answer);
-        } else if (data.type == "ping"){
-            console.log("WebSocket Ping received")
-            setTimeout(() => connection.ws.send(JSON.stringify({"type": "pong"})), PING_TIME_GAP);
-        } else if (data.type == "pong"){
-            console.log("WebSocket Pong received")
-            setTimeout(() => connection.ws.send(JSON.stringify({"type": "ping"})), PING_TIME_GAP);
-        } else {
-            console.warn("Unknown message received on websocket", data.type);
-        }
-    };
-
-    connection.ws.onclose = () => {
+            sdp_type: connection.pc.localDescription.type,
+        }),
+        headers: {'Content-Type': 'application/json'},
+    });
+    if(!callOfferRes.ok) {
         stopCall(connection);
-    };
-
-    connection.ws.onerror = (error) => {
-        console.error("WebSocket error:", error);
-    };
+        throw Error(`Call Offer Http Error. ${dollar}{callOfferRes.status}. ${dollar}{await callOfferRes.text()}`);
+    }
+    const callOfferResJson = await callOfferRes.json();
+    console.log("Received SDP answer:", callOfferResJson);
+    await connection.pc.setRemoteDescription(new RTCSessionDescription(callOfferResJson));
 }
 
 function stopCall(connection) {
-    if (connection.pc) {
-        connection.pc.close();
-        connection.pc = null;
-        console.log("PeerConnection closed.");
-    }
-    if (connection.ws) {
-        connection.ws.close();
-        connection.ws = null;
-        console.log("WebSocket closed.");
+    if (connection.audioElement) {
+        connection.audioElement.pause();
+        connection.audioElement = null;
     }
     if (connection.localStream) {
         connection.localStream.getTracks().forEach(track => track.stop());
         connection.localStream = null;
         console.log("Local media stream stopped.");
     }
-    if (connection.audioElement) {
-        connection.audioElement.pause();
-        connection.audioElement = null;
+    if (connection.pc) {
+        // close transceivers
+        if (connection.pc.getTransceivers) {
+            connection.pc.getTransceivers().forEach((transceiver) => {
+                if (transceiver.stop) {
+                    transceiver.stop();
+                }
+            });
+        }
+        // close local audio / video
+        connection.pc.getSenders().forEach((sender) => {
+            sender.track.stop();
+        });
+        // close peer connection
+        setTimeout(() => {
+            connection.pc.close();
+            connection.pc = null;
+        }, 500);
+        console.log("PeerConnection closed.");
     }
     document.getElementById("closeCallButton").classList.add("closed");
     document.getElementById("statusText").innerHTML = '<span>Status: Call Terminated</span>';
 }
 
 window.addEventListener("DOMContentLoaded", async () => {
-    const connection = {pc: null, ws: null, localStream: null, audioElement: null};
+    const connection = {pc: null, localStream: null, audioElement: null};
     const closeCallButton = document.getElementById("closeCallButton");
     closeCallButton.addEventListener("click", () => stopCall(connection));
     await startCall(connection);
