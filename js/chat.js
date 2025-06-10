@@ -234,7 +234,7 @@ async function populatePastMessages(page=0){
             }
             const msgDom = addMessage(messages[i].message, msgRole, false);
             addTimeToMessage(msgDom, new Date(messages[i].sent_at));
-            addPlayButtonToMessage(msgDom, messages[i].message_id);
+            if (msgRole != "user") addPlayButtonToMessage(msgDom, messages[i].message_id);
         }
     } catch (err) {
         console.error("Error retrieving messages", err);

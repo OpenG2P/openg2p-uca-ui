@@ -508,6 +508,40 @@ main.nav-expanded {
     color: rgba(0, 0, 0, 0.5);
 }
 
+.call-status-text {
+    padding: 20px 40px;
+    font-size: 24px;
+    font-weight: bold;
+    color: black;
+}
+
+.call-close-btn {
+    padding: 20px 40px;
+    font-size: 24px;
+    font-weight: bold;
+    color: white;
+    background-color: #e74c3c; /* Red color */
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.call-close-btn:hover {
+    background-color: #c0392b; /* Darker red on hover */
+    transform: translateY(-2px); /* Slight lift effect */
+}
+
+.call-close-btn:active {
+    background-color: #a52a22; /* Even darker red when clicked */
+    transform: translateY(0); /* Reset lift on click */
+}
+
+.call-close-btn.closed {
+    display: none;
+}
+
 .icon-play::before {
     width: 20px;
     height: 20px;
