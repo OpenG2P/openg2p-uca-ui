@@ -338,7 +338,7 @@ async function toggleSpeakMessage(audio, button) {
         if (audio.audio) audio.audio.pause();
         audio.audio = null;
         button.innerHTML = '<span class="icon-speak-start"></span>';
-    } else {
+    } else if(button.firstChild.classList.contains('icon-speak-start')) {
         if (!audio.src){
             button.innerHTML = '<span class="icon-speak-load"></span>';
             const res = await fetch(GET_SPEAK_MESSAGE, {
