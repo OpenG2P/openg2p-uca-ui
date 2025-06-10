@@ -9,6 +9,7 @@ const GET_CHAT_THREADS = "${API_PATH_PREFIX}chat/threads";
 const POST_NEW_MESSAGE = "${API_PATH_PREFIX}chat/message";
 const GET_CHAT_MESSAGES = "${API_PATH_PREFIX}chat/messages";
 const POST_NEW_VOICE_MESSAGE = "${API_PATH_PREFIX}chat/voice_message";
+const GET_SPEAK_MESSAGE = "${API_PATH_PREFIX}chat/speak_message";
 
 const SHOW_READ_OUT_FOR_INPUTS = "${SHOW_READ_OUT_FOR_INPUTS}" === "true";
 
@@ -37,9 +38,13 @@ function addMessage(text, sender, scrollTop=true) {
     messageTextDiv.classList.add(`message-text`, `message-text-${dollar}{sender}`);
     messageTextDiv.innerHTML = markDownConverter.makeHtml(text);
 
+    const messageBox = document.createElement('div');
+    messageBox.classList.add('message-box');
+    messageBox.appendChild(messageTextDiv);
+
     const messageDiv = document.createElement('div');
     messageDiv.classList.add(`message-${dollar}{sender}`);
-    messageDiv.appendChild(messageTextDiv);
+    messageDiv.appendChild(messageBox);
 
     const messagesContainer = document.getElementById("messagesContainer");
     messagesContainer.appendChild(messageDiv);
@@ -83,7 +88,19 @@ function addVoiceMessage(audioUrl, duration, scrollTop=true) {
 
 function replaceMessage(message, text) {
     if(!text) message.remove();
-    message.childNodes[0].innerHTML = markDownConverter.makeHtml(text);
+    message.firstChild.firstChild.innerHTML = markDownConverter.makeHtml(text);
+    return message;
+}
+
+function addPlayButtonToMessage(message, messageId){
+    const audio = {src: null, audio: null, messageId};
+
+    const speakMessageButton = document.createElement('div');
+    speakMessageButton.classList.add('speak-msg-btn');
+    speakMessageButton.innerHTML = '<span class="icon-speak-start"></span>';
+    speakMessageButton.addEventListener('click', async () => await toggleSpeakMessage(audio, speakMessageButton));
+
+    message.firstChild.appendChild(speakMessageButton);
     return message;
 }
 
@@ -121,6 +138,7 @@ function sendMessage(messageInput) {
     }).then((resJson) => {
         replaceMessage(aiMessage, resJson.message);
         addTimeToMessage(aiMessage, new Date(resJson.sent_at));
+        addPlayButtonToMessage(aiMessage, resJson.message_id);
     }).catch((err) => {
         console.error("Error sending message to backend", err);
         throw err;
@@ -216,6 +234,7 @@ async function populatePastMessages(page=0){
             }
             const msgDom = addMessage(messages[i].message, msgRole, false);
             addTimeToMessage(msgDom, new Date(messages[i].sent_at));
+            if (msgRole != "user") addPlayButtonToMessage(msgDom, messages[i].message_id);
         }
     } catch (err) {
         console.error("Error retrieving messages", err);
@@ -236,6 +255,7 @@ async function initiateNewChatThread(){
         addThread(newThreadId, new Date(createThreadResJson.thread_created_at), true);
         replaceMessage(aiMessage, createThreadResJson.message);
         addTimeToMessage(aiMessage, new Date(createThreadResJson.message_sent_at));
+        addPlayButtonToMessage(aiMessage, createThreadResJson.message_id);
     } catch (err) {
         console.error("Error creating new chat thread", err);
         throw err;
@@ -313,6 +333,32 @@ function toggleAudioPlayback(audio, button) {
     }
 }
 
+async function toggleSpeakMessage(audio, button) {
+    if(button.firstChild.classList.contains('icon-speak-stop')){
+        audio.audio.pause();
+        audio.audio = null;
+        button.innerHTML = '<span class="icon-speak-stop"></span>';
+    } else {
+        if (!audio.src){
+            button.innerHTML = '<span class="icon-speak-load"></span>';
+            const res = await fetch(GET_SPEAK_MESSAGE, {
+                method: "POST",
+                body: JSON.stringify({message_id: audio.messageId}),
+                headers: {"content-type": "application/json"},
+            });
+            if(!res.ok) throw Error(`Speak message Http Error. ${dollar}{res.status}. ${dollar}{await res.text()}`);
+            audio.src = URL.createObjectURL(await res.blob());
+        }
+        audio.audio = new Audio(audio.src);
+        audio.audio.play();
+        button.innerHTML = '<span class="icon-speak-stop"></span>';
+
+        audio.audio.onended = () => {
+            button.innerHTML = '<span class="icon-speak-start"></span>';
+        };
+    }
+}
+
 async function startRecording(mediaRecorder, recordingTime, recordingInterval){
     try{
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -325,7 +371,7 @@ async function startRecording(mediaRecorder, recordingTime, recordingInterval){
         };
 
         mediaRecorder.recorder.onstop = async () => {
-            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
             const audioUrl = URL.createObjectURL(audioBlob);
 
             addVoiceMessage(audioUrl, recordingTime.value);
@@ -343,6 +389,7 @@ async function startRecording(mediaRecorder, recordingTime, recordingInterval){
                 const resJson = await res.json();
                 replaceMessage(aiMessage, resJson.message);
                 addTimeToMessage(aiMessage, new Date(resJson.sent_at));
+                addPlayButtonToMessage(aiMessage, resJson.message_id);
             } catch (err) {
                 console.error('Error sending audio to API', err);
                 throw err;
