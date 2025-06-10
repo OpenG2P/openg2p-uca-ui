@@ -319,7 +319,7 @@ async function toggleMicButton(micButton, recordingIndicator, recordingTimeSpan,
 
 function toggleAudioPlayback(audio, button) {
     if(button.firstChild.classList.contains('icon-pause')){
-        audio.audio.pause();
+        if (audio.audio) audio.audio.pause();
         audio.audio = null;
         button.innerHTML = '<span class="icon-play"></span>';
     } else {
@@ -335,9 +335,9 @@ function toggleAudioPlayback(audio, button) {
 
 async function toggleSpeakMessage(audio, button) {
     if(button.firstChild.classList.contains('icon-speak-stop')){
-        audio.audio.pause();
+        if (audio.audio) audio.audio.pause();
         audio.audio = null;
-        button.innerHTML = '<span class="icon-speak-stop"></span>';
+        button.innerHTML = '<span class="icon-speak-start"></span>';
     } else {
         if (!audio.src){
             button.innerHTML = '<span class="icon-speak-load"></span>';
