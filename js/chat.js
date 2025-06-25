@@ -11,6 +11,8 @@ const GET_CHAT_MESSAGES = "${API_PATH_PREFIX}chat/messages";
 const POST_NEW_VOICE_MESSAGE = "${API_PATH_PREFIX}chat/voice_message";
 const POST_SPEAK_MESSAGE = "${API_PATH_PREFIX}chat/speak_message";
 
+const ENABLE_MESSAGE_TIME = "${ENABLE_MESSAGE_TIME}" != "false";
+
 const userProfile = {};
 
 const markDownConverter = new showdown.Converter();
@@ -103,6 +105,7 @@ function addPlayButtonToMessage(message, messageId){
 }
 
 function addTimeToMessage(message, time) {
+    if(!ENABLE_MESSAGE_TIME) return message;
     const messageTime = document.createTextNode(convertIsoTimestampToReadableText(time));
 
     const messageTimeDiv = document.createElement('div');
